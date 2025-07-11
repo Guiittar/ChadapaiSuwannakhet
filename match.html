@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <title>เกมจับคู่พันธุกรรม (จับคู่ก่อนเฉลยทีหลัง)</title>
+ 
+<style>
+  @import url('https://fonts.googleapis.com/css2?family=Kanit&display=swap');
+  
+
+  * {
+    box-sizing: border-box;
+  }
+  body {
+    font-family: 'Kanit', sans-serif;
+    background: #f0f8ff;
+    text-align: center;
+    padding: 20px;
+    margin: 0;
+    min-height: 100vh;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    color: #34495e;
+  }
+  h1 {
+    font-weight: 700;
+    letter-spacing: 1.2px;
+    margin-bottom: 30px;
+  }
+  #gameContainer {
+    position: relative;
+    max-width: 1000px;
+    width: 100%;
+    display: flex;
+    justify-content: center;
+    gap: 40px;
+    height: auto; /* ✅ แก้จาก 480px เป็น auto */
+    background: #ffffffdd;
+    box-shadow: 0 8px 20px rgba(0,0,0,0.15);
+    border-radius: 15px;
+    padding: 30px 40px;
+    z-index: 0;
+  }
+  canvas {
+    position: absolute;
+    top: 0; left: 0;
+    width: 100%;
+    height: 100%;
+    pointer-events: none;
+    z-index: 0;
+  }
+  .column {
+    display: flex;
+    flex-direction: column;
+    gap: 14px;
+    width: 45%;
+    max-width: 400px;
+    max-height: 650px; /* ✅ เพิ่มเพื่อให้ไม่ล้น */
+    overflow-y: auto;   /* ✅ แก้จาก hidden เป็น auto */
+    position: relative;
+    z-index: 1;
+  }
+  .card {
+    height: 80px;
+    background: #ecf0f1;
+    border: 3px solid transparent;
+    border-radius: 15px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    font-weight: 600;
+    user-select: none;
+    transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+    color: #333;
+    padding: 10px 15px;
+    box-shadow: 0 3px 6px rgba(0,0,0,0.1);
+    text-align: center;
+  }
+  .card:hover:not(.matched):not(.selected) {
+    background-color: #dbe9ff;
+    box-shadow: 0 6px 12px rgba(41, 128, 185, 0.3);
+  }
+  .card.selected {
+    border-color: #8e44ad;
+    background-color: #dcd6f7;
+    box-shadow: 0 0 15px #8e44adaa;
+  }
+  .card.matched {
+    pointer-events: auto;
+    font-weight: 700;
+    color: #0a3d62;
+    border-color: #2980b9;
+    background-color: #cce5ff;
+    box-shadow: 0 0 10px #2980b9bb;
+    cursor: default;
+  }
+
+  #buttonContainer {
+    margin-top: 30px;
+    width: 100%;
+    max-width: 1000px;
+    padding: 0 40px;
+    display: flex;
+    justify-content: center;
+    z-index: 10;
+  }
+  .submit-btn {
+    padding: 14px 36px;
+    font-size: 20px;
+    background-color: #2980b9;
+    color: white;
+    border: none;
+    border-radius: 25px;
+    cursor: pointer;
+    transition: background-color 0.3s, box-shadow 0.3s;
+    box-shadow: 0 6px 12px rgba(41, 128, 185, 0.4);
+    font-weight: 700;
+    letter-spacing: 1.1px;
+    user-select: none;
+    min-width: 220px;
+  }
+  .submit-btn:hover {
+    background-color: #1f618d;
+    box-shadow: 0 8px 18px rgba(31, 97, 141, 0.7);
+  }
+
+  .feedback {
+    margin-top: 30px;
+    max-width: 1000px;
+    width: 100%;
+    padding: 0 40px;
+    text-align: left;
+    font-size: 18px;
+    color: #34495e;
+  }
+  .feedback-item {
+    background: #fff;
+    margin-bottom: 14px;
+    padding: 16px 20px;
+    border-radius: 15px;
+    box-shadow: 0 0 8px rgba(0,0,0,0.1);
+    line-height: 1.5;
+  }
+  .feedback-item.correct {
+    background-color: #2ecc71;
+    color: white;
+    font-weight: 700;
+  }
+  .feedback-item.incorrect {
+    background-color: #e74c3c;
+    color: white;
+    font-weight: 700;
+  }
+  .feedback-item em {
+    font-weight: 500;
+    font-style: normal;
+    display: block;
+    margin-top: 6px;
+    font-size: 16px;
+    opacity: 0.9;
+  }
+
+  @media (max-width: 720px) {
+    #gameContainer {
+      flex-direction: column;
+      height: auto;
+      padding: 20px;
+    }
+    .column {
+      width: 100%;
+      max-width: none;
+      height: auto;
+      gap: 10px;
+      max-height: none;
+    }
+    #buttonContainer, .feedback {
+      padding: 0 20px;
+    }
+    .submit-btn {
+      min-width: 160px;
+      font-size: 18px;
+      padding: 12px 24px;
+    }
+  }
+</style>
+
+</head>
+<body>
+  <h1>เกมจับคู่ความรู้พันธุกรรม (จับคู่ก่อนเฉลยทีหลัง)</h1>
+  <div id="gameContainer">
+    <canvas id="lineCanvas"></canvas>
+    <div class="column" id="leftColumn"></div>
+    <div class="column" id="rightColumn"></div>
+  </div>
+
+  <!-- แยกปุ่มออกมาใน container เพื่อเว้นระยะชัดเจน -->
+  <div id="buttonContainer">
+    <button class="submit-btn" onclick="checkAnswers()">ยืนยันคำตอบ</button>
+  </div>
+
+  <div class="feedback" id="feedback"></div>
+
+<p>by chadapai suwannakhet</p>
+<img src="รูปแม่.jpg" alt="คำอธิบายรูปภาพ" width="100" />
+<style>
+  body {
+  background-image: url('รูปแม่.png');
+}
+   
+  body {
+    background-image: none; /* ลบลายตาราง */
+  }
+</style>
+
+
+<script>
+  const pairs = [
+    { term: 'โครโมโซม', def: 'องค์ประกอบที่บรรจุดีเอ็นเอในนิวเคลียส', explanation: 'โครโมโซมคือโครงสร้างที่ประกอบด้วยดีเอ็นเอและโปรตีนในนิวเคลียส' },
+    { term: 'จีโนม', def: 'ชุดข้อมูลพันธุกรรมทั้งหมดของสิ่งมีชีวิต', explanation: 'จีโนมคือชุดของยีนทั้งหมดในสิ่งมีชีวิตหนึ่งชนิด' },
+    { term: 'อาร์เอ็นเอ', def: 'ส่งข้อความทางพันธุกรรมไปสู่กระบวนการสร้างโปรตีน', explanation: 'อาร์เอ็นเอทำหน้าที่ส่งข้อมูลจากดีเอ็นเอไปที่ไรโบโซมเพื่อสร้างโปรตีน' },
+    { term: 'โปรตีน', def: 'สารชีวภาพที่ทำหน้าที่ต่างๆในร่างกาย', explanation: 'โปรตีนเป็นผลลัพธ์ของการแปลรหัสพันธุกรรม' },
+    { term: 'เซลล์', def: 'หน่วยพื้นฐานของสิ่งมีชีวิต', explanation: 'เซลล์เป็นหน่วยโครงสร้างและหน้าที่ของสิ่งมีชีวิตทั้งหมด' },
+    { term: 'การกลายพันธุ์', def: 'การเปลี่ยนแปลงลำดับเบสในดีเอ็นเอ', explanation: 'การกลายพันธุ์เกิดขึ้นเมื่อเบสของดีเอ็นเอเปลี่ยนแปลงไป' },
+    { term: 'ไรโบโซม', def: 'สถานที่สังเคราะห์โปรตีนในเซลล์', explanation: 'ไรโบโซมแปลรหัสพันธุกรรมเพื่อสร้างโปรตีน' },
+    { term: 'เบส', def: 'หน่วยย่อยของดีเอ็นเอที่เป็นรหัสพันธุกรรม', explanation: 'เบสประกอบด้วย A, T, G, C เป็นรหัสพันธุกรรมหลัก' },
+    { term: 'โคดอน', def: 'กลุ่มเบส 3 ตัวที่กำหนดกรดอะมิโน', explanation: 'โคดอนคือกลุ่มเบส 3 ตัวที่ระบุกรดอะมิโนที่ใช้สร้างโปรตีน' },
+    { term: 'นิวคลีโอไทด์', def: 'หน่วยย่อยของดีเอ็นเอและอาร์เอ็นเอ', explanation: 'นิวคลีโอไทด์ประกอบด้วยน้ำตาล เบส และหมู่ฟอสเฟต' }
+  ];
+
+  const leftColumn = document.getElementById('leftColumn');
+  const rightColumn = document.getElementById('rightColumn');
+  const feedback = document.getElementById('feedback');
+  const canvas = document.getElementById('lineCanvas');
+  const ctx = canvas.getContext('2d');
+
+  let leftCards = [];
+  let rightCards = [];
+  let matchedPairs = [];
+  let selectedTerm = null;
+  let selectedDef = null;
+
+  function setup() {
+    leftColumn.innerHTML = '';
+    rightColumn.innerHTML = '';
+    feedback.innerHTML = '';
+    matchedPairs = [];
+    selectedTerm = null;
+    selectedDef = null;
+    leftCards = [];
+    rightCards = [];
+
+    const termsShuffled = [...pairs].sort(() => Math.random() - 0.5);
+    const defsShuffled = [...pairs].sort(() => Math.random() - 0.5);
+
+    termsShuffled.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.textContent = p.term;
+      div.dataset.pairText = p.def;
+      div.dataset.type = 'term';
+      div.addEventListener('click', () => onTermClick(div));
+      leftColumn.appendChild(div);
+      leftCards.push(div);
+    });
+
+    defsShuffled.forEach(p => {
+      const div = document.createElement('div');
+      div.className = 'card';
+      div.textContent = p.def;
+      div.dataset.pairText = p.term;
+      div.dataset.type = 'def';
+      div.addEventListener('click', () => onDefClick(div));
+      rightColumn.appendChild(div);
+      rightCards.push(div);
+    });
+
+    resizeCanvas();
+    drawLines();
+    updateCardStyles();
+  }
+
+  function resizeCanvas() {
+    const containerRect = document.getElementById('gameContainer').getBoundingClientRect();
+    canvas.width = containerRect.width;
+    canvas.height = containerRect.height;
+  }
+
+  function getEdge(el, side) {
+    const rect = el.getBoundingClientRect();
+    const containerRect = canvas.getBoundingClientRect();
+    const y = rect.top + rect.height / 2 - containerRect.top;
+    const x = side === 'left' ? rect.left - containerRect.left : rect.right - containerRect.left;
+    return { x, y };
+  }
+
+  function drawLines() {
+    ctx.clearRect(0, 0, canvas.width, canvas.height);
+    ctx.lineWidth = 3;
+    ctx.strokeStyle = '#2980b9';
+    matchedPairs.forEach(pair => {
+      const p1 = getEdge(pair.termCard, 'right');
+      const p2 = getEdge(pair.defCard, 'left');
+      ctx.beginPath();
+      ctx.moveTo(p1.x, p1.y);
+      ctx.lineTo(p2.x, p2.y);
+      ctx.stroke();
+    });
+  }
+
+  function onTermClick(card) {
+    if (selectedTerm === card) {
+      selectedTerm.classList.remove('selected');
+      selectedTerm = null;
+      return;
+    }
+    if (matchedPairs.some(pair => pair.termCard === card)) {
+      alert('การ์ดนี้จับคู่แล้ว');
+      return;
+    }
+    if (selectedTerm) selectedTerm.classList.remove('selected');
+    selectedTerm = card;
+    card.classList.add('selected');
+  }
+
+  function onDefClick(card) {
+    if (selectedDef === card) {
+      selectedDef.classList.remove('selected');
+      selectedDef = null;
+      return;
+    }
+    if (matchedPairs.some(pair => pair.defCard === card)) {
+      alert('การ์ดนี้จับคู่แล้ว');
+      return;
+    }
+    if (selectedDef) selectedDef.classList.remove('selected');
+    selectedDef = card;
+    card.classList.add('selected');
+
+    if (selectedTerm && selectedDef) {
+      matchedPairs.push({
+        termCard: selectedTerm,
+        defCard: selectedDef,
+        isCorrect: null
+      });
+      selectedTerm.classList.remove('selected');
+      selectedDef.classList.remove('selected');
+      selectedTerm = null;
+      selectedDef = null;
+      updateCardStyles();
+      drawLines();
+    }
+  }
+
+  function updateCardStyles() {
+    const setMatchedStyle = card => {
+      card.classList.add('matched');
+      card.style.backgroundColor = '#cce5ff';
+      card.style.borderColor = '#2980b9';
+      card.style.color = '#000';
+      card.style.cursor = 'default';
+      card.style.boxShadow = '0 0 10px #2980b9bb';
+    };
+
+    [...leftCards, ...rightCards].forEach(card => {
+      card.classList.remove('matched', 'selected');
+      card.style.backgroundColor = '#ecf0f1';
+      card.style.borderColor = 'transparent';
+      card.style.color = '#333';
+      card.style.cursor = 'pointer';
+      card.style.boxShadow = '0 3px 6px rgba(0,0,0,0.1)';
+    });
+
+    matchedPairs.forEach(pair => {
+      setMatchedStyle(pair.termCard);
+      setMatchedStyle(pair.defCard);
+    });
+
+    if (selectedTerm) {
+      selectedTerm.classList.add('selected');
+      selectedTerm.style.borderColor = '#8e44ad';
+      selectedTerm.style.backgroundColor = '#dcd6f7';
+      selectedTerm.style.boxShadow = '0 0 15px #8e44adaa';
+      selectedTerm.style.cursor = 'pointer';
+    }
+    if (selectedDef) {
+      selectedDef.classList.add('selected');
+      selectedDef.style.borderColor = '#8e44ad';
+      selectedDef.style.backgroundColor = '#dcd6f7';
+      selectedDef.style.boxShadow = '0 0 15px #8e44adaa';
+      selectedDef.style.cursor = 'pointer';
+    }
+  }
+  function onTermClick(card) {
+  // ถ้าการ์ดนี้จับคู่แล้ว ให้ยกเลิกการจับคู่
+  const existingPairIndex = matchedPairs.findIndex(pair => pair.termCard === card);
+  if (existingPairIndex !== -1) {
+    // ลบคู่ที่จับคู่แล้วนี้ออก
+    matchedPairs.splice(existingPairIndex, 1);
+    updateCardStyles();
+    drawLines();
+    return;
+  }
+
+  if (selectedTerm === card) {
+    selectedTerm.classList.remove('selected');
+    selectedTerm = null;
+    return;
+  }
+  if (selectedTerm) selectedTerm.classList.remove('selected');
+  selectedTerm = card;
+  card.classList.add('selected');
+}
+
+function onDefClick(card) {
+  // ถ้าการ์ดนี้จับคู่แล้ว ให้ยกเลิกการจับคู่
+  const existingPairIndex = matchedPairs.findIndex(pair => pair.defCard === card);
+  if (existingPairIndex !== -1) {
+    matchedPairs.splice(existingPairIndex, 1);
+    updateCardStyles();
+    drawLines();
+    return;
+  }
+
+  if (selectedDef === card) {
+    selectedDef.classList.remove('selected');
+    selectedDef = null;
+    return;
+  }
+  if (selectedDef) selectedDef.classList.remove('selected');
+  selectedDef = card;
+  card.classList.add('selected');
+
+  if (selectedTerm && selectedDef) {
+    // ตรวจสอบว่าการ์ดทั้งคู่ยังไม่จับคู่กับอันอื่นก่อนเพิ่ม
+    if (matchedPairs.some(pair => pair.termCard === selectedTerm || pair.defCard === selectedDef)) {
+      // ถ้าใดๆในคู่จับคู่แล้ว ให้ยกเลิกการจับคู่เก่าก่อน
+      matchedPairs = matchedPairs.filter(pair => pair.termCard !== selectedTerm && pair.defCard !== selectedDef);
+    }
+
+    matchedPairs.push({
+      termCard: selectedTerm,
+      defCard: selectedDef,
+      isCorrect: null
+    });
+    selectedTerm.classList.remove('selected');
+    selectedDef.classList.remove('selected');
+    selectedTerm = null;
+    selectedDef = null;
+    updateCardStyles();
+    drawLines();
+  }
+}
+
+
+  function checkAnswers() {
+    if (matchedPairs.length < pairs.length) {
+      alert("โปรดจับคู่ให้ครบทั้ง 10 คู่ก่อนยืนยันคำตอบ");
+      return;
+    }
+    feedback.innerHTML = '<h2>ผลการจับคู่</h2>';
+    matchedPairs.forEach(pair => {
+      const correct = pairs.some(p => p.term === pair.termCard.textContent && p.def === pair.defCard.textContent);
+      pair.isCorrect = correct;
+    });
+
+    pairs.forEach(p => {
+      const matched = matchedPairs.find(mp => mp.termCard.textContent === p.term);
+      const isCorrect = matched?.isCorrect || false;
+      feedback.innerHTML += `
+        <div class="feedback-item ${isCorrect ? 'correct' : 'incorrect'}">
+          <strong>${p.term}</strong> - ${p.def}<br>
+          ${isCorrect ? '✅ ถูกต้อง' : '❌ ไม่ถูกต้อง'}<br>
+          ${!isCorrect ? `<em>คำอธิบาย:</em> ${p.explanation}` : ''}
+        </div>`;
+    });
+  }
+
+  window.addEventListener('resize', () => {
+    resizeCanvas();
+    drawLines();
+  });
+
+  window.onload = setup;
+</script>
+</body>
+</html>

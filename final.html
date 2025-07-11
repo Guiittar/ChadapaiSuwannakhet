@@ -1,0 +1,481 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>เกมตอบคำถามพันธุกรรม</title>
+  <style>
+    #scoreModal {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      background: rgba(0,0,0,0.6);
+      display: none;
+      justify-content: center;
+      align-items: center;
+      z-index: 1000;
+    }
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: #f0f8ff;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .question-box {
+      background: #fff;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 700px;
+    }
+    .choices button {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      width: 80%;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 2px solid #3498db;
+      background: #ffffff;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .choices button:hover {
+      background: #3498db;
+      color: rgb(255, 255, 255);
+    }
+    .feedback {
+      font-size: 20px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    .correct {
+      color: green;
+    }
+    .incorrect {
+      color: red;
+    }
+    #nextBtn, #prevBtn {
+      margin-top: 20px;
+      padding: 10px 20px;
+      font-size: 16px;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    #nextBtn {
+      background: #2ecc71;
+      display: none;
+    }
+    #prevBtn {
+      background: #e67e22;
+      display: none;
+      margin-right: 10px;
+    }
+    .result-box {
+      text-align: left;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .result-item {
+      background: #ffffff;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+    .result-item img {
+      max-width: 100px;
+      float: right;
+      margin-left: 15px;
+    }
+    .choice-selected {
+      background-color: #3498db;
+      color: rgb(65, 241, 121);
+      border-color: #2980b9;
+    }
+    #fireworksCanvas {
+      position: fixed;
+      top: 0; left: 0;
+      width: 100%; height: 100%;
+      pointer-events: none;
+      z-index: 999;
+    }
+  </style>
+</head>
+<body>
+  <h1>ทดสอบหลังเรียน</h1>
+  <div class="question-box">
+    <div id="question">Loading...</div>
+    <img id="image" src="" alt="" style="max-width:200px; margin: 15px auto; display:none;" />
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback"></div>
+    <button id="prevBtn" onclick="prevQuestion()">ย้อนกลับ</button>
+    <button id="nextBtn" onclick="nextQuestion()">ถัดไป</button>
+  </div>
+  <div class="result-box" id="resultBox"></div>
+
+  <!-- กล่องแสดงคะแนน (Modal) -->
+  <div id="scoreModal">
+    <div style="background: white; padding: 40px 30px; border-radius: 16px; text-align: center; max-width: 400px; width: 90%;">
+      <h2>ผลคะแนน</h2>
+      <div id="scoreText" style="font-size: 22px; margin-top: 20px;"></div>
+      <button onclick="closeScore()" style="margin-top: 30px; padding: 12px 28px; font-size: 18px; background-color: #3498db; color: white; border: none; border-radius: 8px; cursor: pointer;">ยืนยัน</button>
+    </div>
+  </div>
+
+  <!-- เอฟเฟกต์พลุ -->
+  <canvas id="fireworksCanvas"></canvas>
+
+<script>
+  const questions = [
+    {
+      question: "ดีเอ็นเอทำหน้าที่อะไร?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/DNA_chemical_structure.svg/400px-DNA_chemical_structure.svg.png",
+      choices: ["เป็นแหล่งพลังงานของเซลล์","ควบคุมการหายใจของเซลล์","เก็บข้อมูลพันธุกรรม","สร้างผนังเซลล์"],
+      answer: 2,
+      explanation: "ดีเอ็นเอมีหน้าที่หลักในการเก็บข้อมูลทางพันธุกรรม"
+    },
+    {
+      question: "ยีนคืออะไร?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/DNA_gene.png/300px-DNA_gene.png",
+      choices: ["ส่วนของเซลล์ที่ใช้หายใจ","หน่วยของพันธุกรรมที่อยู่บนดีเอ็นเอ","ของเหลวในนิวเคลียส","สารเคมีที่ใช้สร้างโปรตีน"],
+      answer: 1,
+      explanation: "ยีนคือหน่วยย่อยของดีเอ็นเอที่กำหนดลักษณะเฉพาะ"
+    },
+    {
+      question: "โครโมโซมประกอบด้วยอะไร?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Chromosome.svg/300px-Chromosome.svg.png",
+      choices: ["เฉพาะโปรตีน","เฉพาะน้ำ","ดีเอ็นเอและโปรตีน","ไขมันและน้ำ"],
+      answer: 2,
+      explanation: "โครโมโซมประกอบด้วยดีเอ็นเอพันรอบโปรตีน"
+    },
+    {
+      question: "เซลล์มนุษย์มีโครโมโซมกี่คู่?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Human_karyotype.svg/300px-Human_karyotype.svg.png",
+      choices: ["23 คู่","46 คู่","22 คู่","44 คู่"],
+      answer: 0,
+      explanation: "เซลล์ปกติของมนุษย์มีโครโมโซม 23 คู่"
+    },
+    {
+      question: "หน่วยพันธุกรรมที่สามารถกลายพันธุ์ได้คืออะไร?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/DNA_methylation_mutation.svg/300px-DNA_methylation_mutation.svg.png",
+      choices: ["โครโมโซม","ดีเอ็นเอ","ยีน","โปรตีน"],
+      answer: 2,
+      explanation: "ยีนสามารถกลายพันธุ์และเปลี่ยนแปลงข้อมูลพันธุกรรมได้"
+    },
+    {
+      question: "ดีเอ็นเอมีโครงสร้างแบบใด?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/DNA_double_helix_vertical.png/300px-DNA_double_helix_vertical.png",
+      choices: ["เส้นตรง","เกลียวคู่","วงกลม","รูปสามเหลี่ยม"],
+      answer: 1,
+      explanation: "ดีเอ็นเอมีโครงสร้างแบบเกลียวคู่ (Double Helix)"
+    },
+    {
+      question: "สารพันธุกรรมในสิ่งมีชีวิตคือ?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/DNA_sample.jpg/300px-DNA_sample.jpg",
+      choices: ["โปรตีน","ไลโปโปรตีน","ดีเอ็นเอ","เอนไซม์"],
+      answer: 2,
+      explanation: "ดีเอ็นเอคือสารพันธุกรรมหลักในสิ่งมีชีวิต"
+    },
+    {
+      question: "ข้อมูลพันธุกรรมถ่ายทอดจากรุ่นสู่รุ่นผ่านทางใด?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Genetic_inheritance_diagram.png/300px-Genetic_inheritance_diagram.png",
+      choices: ["โครโมโซม","เซลล์","เลือด","พลาสมา"],
+      answer: 0,
+      explanation: "ข้อมูลพันธุกรรมถูกส่งผ่านทางโครโมโซม"
+    },
+    {
+      question: "ยีนมีบทบาทอย่างไรในสิ่งมีชีวิต?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Gene_expression_simple.svg/300px-Gene_expression_simple.svg.png",
+      choices: ["สร้างพลังงาน","ควบคุมลักษณะเฉพาะ","เก็บน้ำ","ขนส่งออกซิเจน"],
+      answer: 1,
+      explanation: "ยีนควบคุมลักษณะต่างๆ เช่น สีตา เพศ ความสูง"
+    },
+    {
+      question: "การกลายพันธุ์เกิดจากอะไร?",
+      image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Point_mutation_diagram.png/300px-Point_mutation_diagram.png",
+      choices: ["ความเครียด","การรับประทานอาหาร","การเปลี่ยนแปลงลำดับเบสในดีเอ็นเอ","การออกกำลังกาย"],
+      answer: 2,
+      explanation: "การกลายพันธุ์เกิดจากการเปลี่ยนแปลงของลำดับเบสในดีเอ็นเอ"
+    },
+    {
+      question: "ฐาน A จะจับคู่กับเบสใดใน DNA?",
+      image: "",
+      choices: ["T", "C", "G", "U"],
+      answer: 0,
+      explanation: "A จับคู่กับ T ใน DNA ตามคู่เบสพื้นฐาน"
+    },
+    {
+      question: "โครงสร้างของโครโมโซมพับแน่นในช่วงใดของเซลล์แบ่ง?",
+      image: "",
+      choices: ["Interphase", "Prophase", "Metaphase", "Telophase"],
+      answer: 1,
+      explanation: "โครโมโซมเริ่มคดแน่นช่วง prophase"
+    },
+    {
+      question: "จำนวนโครโมโซมในมนุษย์คือเท่าไร?",
+      image: "",
+      choices: ["23 คู่", "46 คู่", "46 ตัว", "23 ตัว"],
+      answer: 2,
+      explanation: "มนุษย์มีโครโมโซม 46 แท่ง หรือ 23 คู่"
+    },
+    {
+      question: "ยีนอยู่บนโครโมโซมบริเวณใด?",
+      image: "",
+      choices: ["Centromere", "Locus", "Telomere", "Chromatid"],
+      answer: 1,
+      explanation: "ตำแหน่งของยีนบนโครโมโซมเรียกว่า locus"
+    },
+    {
+      question: "กระบวนการใดสร้าง RNA จาก DNA?",
+      image: "",
+      choices: ["Translation", "Transcription", "Replication", "Mutation"],
+      answer: 1,
+      explanation: "Transcription คือการสร้าง RNA จากแม่แบบ DNA"
+    },
+    {
+      question: "RNA มีเบสอะไรแทน T?",
+      image: "",
+      choices: ["A", "G", "C", "U"],
+      answer: 3,
+      explanation: "RNA ใช้ Uracil (U) แทน Thymine (T)"
+    },
+    {
+      question: "การถอดรหัส (translation) เกิดที่ใด?",
+      image: "",
+      choices: ["Nucleus", "Cytoplasm", "Ribosome", "Mitochondria"],
+      answer: 2,
+      explanation: "Ribosome เป็นที่แปลรหัส mRNA เป็นโปรตีน"
+    },
+    {
+      question: "อะไรไม่ใช่ผลของการกลายพันธุ์?",
+      image: "",
+      choices: ["มะเร็ง", "ไม่มีผล", "ทนต่อโรค", "ผลิตพลังงาน"],
+      answer: 3,
+      explanation: "การกลายพันธุ์ไม่เกี่ยวกับการผลิตพลังงานโดยตรง"
+    },
+    {
+      question: "โครโมโซมเพศในเพศหญิงคืออะไร?",
+      image: "",
+      choices: ["XY", "XX", "YY", "XZ"],
+      answer: 1,
+      explanation: "หญิงมีโครโมโซม XX"
+    },
+    {
+      question: "ม็คโครโมโซม mitochondrial inheritance ถ่ายทอดทางใด?",
+      image: "",
+      choices: ["พ่อ", "แม่", "ทั้งสอง", "ไม่มีใคร"],
+      answer: 1,
+      explanation: "mtDNA สืบจากแม่เท่านั้น"
+    }
+  ];
+
+  let current = 0;
+  const results = [];
+  const questionDiv = document.getElementById("question");
+  const choicesDiv = document.getElementById("choices");
+  const feedbackDiv = document.getElementById("feedback");
+  const nextBtn = document.getElementById("nextBtn");
+  const prevBtn = document.getElementById("prevBtn");
+  const imageEl = document.getElementById("image");
+  const resultBox = document.getElementById("resultBox");
+
+  function loadQuestion() {
+  const q = questions[current];
+  questionDiv.textContent = `ข้อที่ ${current + 1}: ${q.question}`;
+  imageEl.src = q.image;
+  imageEl.style.display = q.image ? 'block' : 'none';
+  feedbackDiv.textContent = "";
+  choicesDiv.innerHTML = "";
+
+  q.choices.forEach((choice, index) => {
+    const btn = document.createElement("button");
+    btn.textContent = choice;
+    btn.onclick = () => checkAnswer(index);
+
+    if (q.userSelected === index) {
+      btn.classList.add('choice-selected');
+    }
+    choicesDiv.appendChild(btn);
+  });
+
+  // แสดงปุ่มย้อนกลับถ้าไม่ใช่ข้อแรก
+  prevBtn.style.display = current > 0 ? "inline-block" : "none";
+
+  // แสดงปุ่มถัดไปถ้ายังไม่ใช่ข้อสุดท้าย
+  nextBtn.style.display = (current < questions.length - 1) ? "inline-block" : "none";
+
+  // เปลี่ยนข้อความปุ่มถัดไป
+  if (current === questions.length - 1) {
+    nextBtn.textContent = "ส่งคำตอบ";
+  } else {
+    nextBtn.textContent = "ถัดไป";
+  }
+}
+
+  function checkAnswer(selected) {
+    const q = questions[current];
+    q.userSelected = selected;
+
+    Array.from(choicesDiv.children).forEach((btn, idx) => {
+      btn.classList.toggle('choice-selected', idx === selected);
+    });
+
+    nextBtn.style.display = "inline-block";
+  }
+
+  function saveResult(index) {
+    const q = questions[index];
+    const selected = q.userSelected;
+    if (selected === undefined) return;
+
+    const correct = selected === q.answer;
+
+    const existingIndex = results.findIndex(r => r.question === q.question);
+    const newResult = {
+      question: q.question,
+      selected: q.choices[selected],
+      correct: q.choices[q.answer],
+      explanation: q.explanation,
+      image: q.image,
+      isCorrect: correct
+    };
+
+    if (existingIndex !== -1) {
+      results[existingIndex] = newResult;
+    } else {
+      results.push(newResult);
+    }
+  }
+
+function nextQuestion() {
+  const q = questions[current];
+  if (q.userSelected === undefined) {
+    alert("กรุณาเลือกคำตอบก่อนกดถัดไป");
+    return;
+  }
+
+  saveResult(current);
+
+  if (current === questions.length - 1) {
+    showResults();
+    return;
+  }
+
+  current++;
+  loadQuestion();
+}
+
+
+  function prevQuestion() {
+    if (current === 0) return;
+
+    saveResult(current);
+    current--;
+    loadQuestion();
+  }
+
+  function showResults() {
+    document.querySelector(".question-box").style.display = "none";
+    resultBox.innerHTML = `<h2>สรุปผลลัพธ์</h2>`;
+
+    let score = 0;
+    results.forEach((res, i) => {
+      if (res.isCorrect) score++;
+      resultBox.innerHTML += `
+        <div class="result-item">
+          <strong>ข้อที่ ${i + 1}:</strong> ${res.question}<br>
+          ${res.image ? `<img src="${res.image}" alt="รูปข้อ ${i + 1}">` : ''}
+          <br>✅ คำตอบที่ถูกต้อง: ${res.correct}<br>
+          <span class="${res.isCorrect ? 'correct' : 'incorrect'}">
+            ${res.isCorrect ? 'คุณตอบถูก' : 'คุณตอบผิด'} - คำตอบของคุณ: ${res.selected}
+          </span><br>
+          <em>คำอธิบาย:</em> ${res.explanation}
+        </div>
+      `;
+    });
+
+    document.getElementById('scoreModal').style.display = 'flex';
+    document.getElementById('scoreText').innerHTML = `🎉 คุณได้คะแนน ${score} / ${questions.length} ข้อ!`;
+
+    launchFireworks();
+  }
+
+  function launchFireworks() {
+    const canvas = document.getElementById("fireworksCanvas");
+    const ctx = canvas.getContext("2d");
+    canvas.width = window.innerWidth;
+    canvas.height = window.innerHeight;
+
+    const fireworks = [];
+
+    function createFirework() {
+      const x = Math.random() * canvas.width;
+      const y = Math.random() * canvas.height / 2;
+      const colors = ['#ff0', '#f00', '#0f0', '#0ff', '#f0f', '#fff'];
+      for (let i = 0; i < 40; i++) {
+        fireworks.push({
+          x, y,
+          dx: Math.random() * 4 - 2,
+          dy: Math.random() * 4 - 2,
+          alpha: 1,
+          color: colors[Math.floor(Math.random() * colors.length)],
+          size: Math.random() * 3 + 2
+        });
+      }
+    }
+
+    let frame = 0;
+    function animate() {
+      frame++;
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+      if (frame % 10 === 0) {
+        createFirework();
+      }
+
+      for (let i = fireworks.length - 1; i >= 0; i--) {
+        const f = fireworks[i];
+        ctx.fillStyle = f.color;
+        ctx.globalAlpha = f.alpha;
+        ctx.beginPath();
+        ctx.arc(f.x, f.y, f.size, 0, Math.PI * 2);
+        ctx.fill();
+
+        f.x += f.dx;
+        f.y += f.dy;
+        f.alpha -= 0.02;
+
+        if (f.alpha <= 0) {
+          fireworks.splice(i, 1);
+        }
+      }
+      ctx.globalAlpha = 1;
+      if (fireworks.length > 0) {
+        requestAnimationFrame(animate);
+      }
+    }
+
+    animate();
+
+    // หยุดพลุหลัง 5 วินาที
+    setTimeout(() => {
+      ctx.clearRect(0, 0, canvas.width, canvas.height);
+    }, 5000);
+  }
+
+  function closeScore() {
+    document.getElementById('scoreModal').style.display = 'none';
+  }
+
+  // โหลดคำถามแรกตอนเริ่ม
+  loadQuestion();
+</script>
+</body>
+</html>

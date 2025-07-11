@@ -1,0 +1,299 @@
+<!DOCTYPE html>
+<html lang="th">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>เกมตอบคำถามพันธุกรรม</title>
+  <style>
+    body {
+      font-family: 'Kanit', sans-serif;
+      background: #f0f8ff;
+      padding: 20px;
+      text-align: center;
+    }
+    h1 {
+      color: #2c3e50;
+    }
+    .question-box {
+      background: #ffffff;
+      margin: 20px auto;
+      padding: 20px;
+      border-radius: 16px;
+      box-shadow: 0 0 10px rgba(0,0,0,0.1);
+      max-width: 700px;
+    }
+    .choices button {
+      display: block;
+      margin: 10px auto;
+      padding: 10px 20px;
+      width: 80%;
+      font-size: 16px;
+      border-radius: 10px;
+      border: 2px solid #3498db;
+      background: #ecf0f1;
+      cursor: pointer;
+      transition: 0.3s;
+    }
+    .choices button:hover {
+      background: #3498db;
+      color: white;
+    }
+    .feedback {
+      font-size: 20px;
+      margin-top: 20px;
+      font-weight: bold;
+    }
+    .correct {
+      color: green;
+    }
+    .incorrect {
+      color: red;
+    }
+    #nextBtn {
+      margin-top: 20px;
+      display: none;
+      padding: 10px 20px;
+      font-size: 16px;
+      background: #2ecc71;
+      color: white;
+      border: none;
+      border-radius: 8px;
+      cursor: pointer;
+    }
+    .result-box {
+      text-align: left;
+      max-width: 800px;
+      margin: 0 auto;
+    }
+    .result-item {
+      background: #fff;
+      margin: 10px 0;
+      padding: 15px;
+      border-radius: 12px;
+      box-shadow: 0 0 6px rgba(0,0,0,0.1);
+    }
+    .result-item img {
+      max-width: 100px;
+      float: right;
+    }
+  </style>
+</head>
+<body>
+  <h1>ตอบคำถามพันธุกรรม</h1>
+  <div class="question-box">
+    <div id="question">Loading...</div>
+    <img id="image" src="" alt="" style="max-width:200px; margin: 15px auto; display:none;">
+    <div class="choices" id="choices"></div>
+    <div class="feedback" id="feedback"></div>
+    <button id="nextBtn" onclick="nextQuestion()">ถัดไป</button>
+  </div>
+  <div class="result-box" id="resultBox"></div>
+
+  <script>
+    const questions = [
+      {
+        question: "ดีเอ็นเอทำหน้าที่อะไร?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/89/DNA_chemical_structure.svg/400px-DNA_chemical_structure.svg.png",
+        choices: ["เป็นแหล่งพลังงานของเซลล์","ควบคุมการหายใจของเซลล์","เก็บข้อมูลพันธุกรรม","สร้างผนังเซลล์"],
+        answer: 2,
+        explanation: "ดีเอ็นเอมีหน้าที่หลักในการเก็บข้อมูลทางพันธุกรรม"
+      },
+      {
+        question: "ยีนคืออะไร?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b2/DNA_gene.png/300px-DNA_gene.png",
+        choices: ["ส่วนของเซลล์ที่ใช้หายใจ","หน่วยของพันธุกรรมที่อยู่บนดีเอ็นเอ","ของเหลวในนิวเคลียส","สารเคมีที่ใช้สร้างโปรตีน"],
+        answer: 1,
+        explanation: "ยีนคือหน่วยย่อยของดีเอ็นเอที่กำหนดลักษณะเฉพาะ"
+      },
+      {
+        question: "โครโมโซมประกอบด้วยอะไร?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f3/Chromosome.svg/300px-Chromosome.svg.png",
+        choices: ["เฉพาะโปรตีน","เฉพาะน้ำ","ดีเอ็นเอและโปรตีน","ไขมันและน้ำ"],
+        answer: 2,
+        explanation: "โครโมโซมประกอบด้วยดีเอ็นเอพันรอบโปรตีน"
+      },
+      {
+        question: "เซลล์มนุษย์มีโครโมโซมกี่คู่?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/d/d8/Human_karyotype.svg/300px-Human_karyotype.svg.png",
+        choices: ["23 คู่","46 คู่","22 คู่","44 คู่"],
+        answer: 0,
+        explanation: "เซลล์ปกติของมนุษย์มีโครโมโซม 23 คู่"
+      },
+      {
+        question: "หน่วยพันธุกรรมที่สามารถกลายพันธุ์ได้คืออะไร?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/bd/DNA_methylation_mutation.svg/300px-DNA_methylation_mutation.svg.png",
+        choices: ["โครโมโซม","ดีเอ็นเอ","ยีน","โปรตีน"],
+        answer: 2,
+        explanation: "ยีนสามารถกลายพันธุ์และเปลี่ยนแปลงข้อมูลพันธุกรรมได้"
+      },
+      {
+        question: "ดีเอ็นเอมีโครงสร้างแบบใด?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/8/8c/DNA_double_helix_vertical.png/300px-DNA_double_helix_vertical.png",
+        choices: ["เส้นตรง","เกลียวคู่","วงกลม","รูปสามเหลี่ยม"],
+        answer: 1,
+        explanation: "ดีเอ็นเอมีโครงสร้างแบบเกลียวคู่ (Double Helix)"
+      },
+      {
+        question: "สารพันธุกรรมในสิ่งมีชีวิตคือ?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/f/f7/DNA_sample.jpg/300px-DNA_sample.jpg",
+        choices: ["โปรตีน","ไลโปโปรตีน","ดีเอ็นเอ","เอนไซม์"],
+        answer: 2,
+        explanation: "ดีเอ็นเอคือสารพันธุกรรมหลักในสิ่งมีชีวิต"
+      },
+      {
+        question: "ข้อมูลพันธุกรรมถ่ายทอดจากรุ่นสู่รุ่นผ่านทางใด?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/6/62/Genetic_inheritance_diagram.png/300px-Genetic_inheritance_diagram.png",
+        choices: ["โครโมโซม","เซลล์","เลือด","พลาสมา"],
+        answer: 0,
+        explanation: "ข้อมูลพันธุกรรมถูกส่งผ่านทางโครโมโซม"
+      },
+      {
+        question: "ยีนมีบทบาทอย่างไรในสิ่งมีชีวิต?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/7/7f/Gene_expression_simple.svg/300px-Gene_expression_simple.svg.png",
+        choices: ["สร้างพลังงาน","ควบคุมลักษณะเฉพาะ","เก็บน้ำ","ขนส่งออกซิเจน"],
+        answer: 1,
+        explanation: "ยีนควบคุมลักษณะต่างๆ เช่น สีตา เพศ ความสูง"
+      },
+      {
+        question: "การกลายพันธุ์เกิดจากอะไร?",
+        image: "https://upload.wikimedia.org/wikipedia/commons/thumb/b/b9/Point_mutation_diagram.png/300px-Point_mutation_diagram.png",
+        choices: ["ความเครียด","การรับประทานอาหาร","การเปลี่ยนแปลงลำดับเบสในดีเอ็นเอ","การออกกำลังกาย"],
+        answer: 2,
+        explanation: "การกลายพันธุ์เกิดจากการเปลี่ยนแปลงของลำดับเบสในดีเอ็นเอ"
+      }
+    ];
+
+    let current = 0;
+    const results = [];
+    const questionDiv = document.getElementById("question");
+    const choicesDiv = document.getElementById("choices");
+    const feedbackDiv = document.getElementById("feedback");
+    const nextBtn = document.getElementById("nextBtn");
+    const imageEl = document.getElementById("image");
+    const resultBox = document.getElementById("resultBox");
+
+    function loadQuestion() {
+      const q = questions[current];
+      questionDiv.textContent = `ข้อที่ ${current + 1}: ${q.question}`;
+      imageEl.src = q.image;
+      imageEl.style.display = 'block';
+      choicesDiv.innerHTML = "";
+      feedbackDiv.textContent = "";
+      nextBtn.style.display = "none";
+
+      q.choices.forEach((choice, index) => {
+        const btn = document.createElement("button");
+        btn.textContent = choice;
+        btn.onclick = () => checkAnswer(index);
+        choicesDiv.appendChild(btn);
+      });
+    }
+
+    function checkAnswer(selected) {
+      const q = questions[current];
+      const correct = selected === q.answer;
+      feedbackDiv.innerHTML = correct
+        ? `<span class='correct'>✅ ถูกต้อง!</span>`
+        : `<span class='incorrect'>❌ ไม่ถูกต้อง:</span> ${q.explanation}`;
+
+      results.push({
+        question: q.question,
+        selected: q.choices[selected],
+        correct: q.choices[q.answer],
+        explanation: q.explanation,
+        image: q.image,
+        isCorrect: correct
+      });
+
+      Array.from(choicesDiv.children).forEach(btn => btn.disabled = true);
+      nextBtn.style.display = "inline-block";
+    }
+
+    function nextQuestion() {
+      current++;
+      if (current < questions.length) {
+        loadQuestion();
+      } else {
+        showResults();
+      }
+    }
+
+    function showResults() {
+      document.querySelector(".question-box").style.display = "none";
+      resultBox.innerHTML = `<h2>สรุปผลลัพธ์</h2>`;
+      results.forEach((res, i) => {
+        resultBox.innerHTML += `
+          <div class="result-item">
+            <strong>ข้อที่ ${i + 1}:</strong> ${res.question}<br>
+            <img src="${res.image}" alt="รูปข้อ ${i + 1}">
+            <br>✅ คำตอบที่ถูกต้อง: ${res.correct}<br>
+            <span class="${res.isCorrect ? 'correct' : 'incorrect'}">
+              ${res.isCorrect ? 'คุณตอบถูก' : 'คุณตอบผิด'} - คำตอบของคุณ: ${res.selected}
+            </span><br>
+            <em>คำอธิบาย:</em> ${res.explanation}
+          </div>
+        `;
+      });
+    }
+
+    loadQuestion();
+    function onTermClick(card) {
+  // ถ้าการ์ดนี้จับคู่แล้ว ให้ยกเลิกการจับคู่
+  const existingPairIndex = matchedPairs.findIndex(pair => pair.termCard === card);
+  if (existingPairIndex !== -1) {
+    matchedPairs.splice(existingPairIndex, 1);
+    updateCardStyles();
+    drawLines();
+    return;
+  }
+
+  if (selectedTerm === card) {
+    selectedTerm.classList.remove('selected');
+    selectedTerm = null;
+    return;
+  }
+  if (selectedTerm) selectedTerm.classList.remove('selected');
+  selectedTerm = card;
+  card.classList.add('selected');
+}
+
+function onDefClick(card) {
+  // ถ้าการ์ดนี้จับคู่แล้ว ให้ยกเลิกการจับคู่
+  const existingPairIndex = matchedPairs.findIndex(pair => pair.defCard === card);
+  if (existingPairIndex !== -1) {
+    matchedPairs.splice(existingPairIndex, 1);
+    updateCardStyles();
+    drawLines();
+    return;
+  }
+
+  if (selectedDef === card) {
+    selectedDef.classList.remove('selected');
+    selectedDef = null;
+    return;
+  }
+  if (selectedDef) selectedDef.classList.remove('selected');
+  selectedDef = card;
+  card.classList.add('selected');
+
+  if (selectedTerm && selectedDef) {
+    // ลบคู่เดิมที่มี term หรือ def ที่เลือกนี้ออกก่อนเพิ่มคู่ใหม่
+    matchedPairs = matchedPairs.filter(pair => pair.termCard !== selectedTerm && pair.defCard !== selectedDef);
+
+    matchedPairs.push({
+      termCard: selectedTerm,
+      defCard: selectedDef,
+      isCorrect: null
+    });
+
+    selectedTerm.classList.remove('selected');
+    selectedDef.classList.remove('selected');
+    selectedTerm = null;
+    selectedDef = null;
+    updateCardStyles();
+    drawLines();
+  }
+}
+  </script>
+</body>
+</html>
